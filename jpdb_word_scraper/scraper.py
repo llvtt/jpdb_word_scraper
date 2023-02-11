@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import dataclasses
-import typing
 
 import bs4
 import requests
@@ -16,7 +15,7 @@ class Word:
     definitions: list[str]
     parts_of_speech: list[str]
     notes: str | None
-    sentence: str
+    sentence: str | None
 
 
 cookie = "sid=cf0dc7888fb90a1eb190f8873e0e7fb2"
@@ -38,8 +37,6 @@ headers = {
     "cookie": cookie,
     "if-none-match": "^^",
 }
-
-word_url = "https://jpdb.io/vocabulary/1429200/%E8%AA%BF%E6%95%B4/%E3%81%A1%E3%82%87%E3%81%86%E3%81%9B%E3%81%84?lang=english#a"
 
 
 class ParseError(Exception):
@@ -63,17 +60,13 @@ def _strip_furigana(tag):
     return ''.join(_japanese_strings(tag))
 
 
-def get_word_info() -> Word:
-    response = requests.get(word_url, headers=headers)
+def lookup_word(spelling) -> Word:
+    url = f"https://jpdb.io/search?q={spelling}&lang=english#a"
+    response = requests.get(url, headers=headers)
     response.encoding = 'UTF-8'
     soup = bs4.BeautifulSoup(response.text, 'lxml')
 
-    # spelling
-    spelling_section = soup.find('div', class_='spelling')
-    if not spelling_section:
-        raise ParseError("could not find spelling")
-    spelling = _strip_furigana(spelling_section)
-
+    # reading
     accent_section = soup.find('div', class_='subsection-pitch-accent')
     if not isinstance(accent_section, bs4.element.Tag):
         raise ParseError("could not find subsection-pitch-accent")
@@ -95,15 +88,19 @@ def get_word_info() -> Word:
         raise ParseError("could not find part-of-speech section")
     pos_list = [pos.text for pos in pos_section.children]
 
-    # custon definition (may not be present?)
+    # custon definition (may not be present)
     custom_meaning = meanings.find('div', class_='custom-meaning')
     if custom_meaning:
         notes = custom_meaning.text.strip()
     else:
         notes = None
 
-    # custom sentence (may not be present?)
-    sentence = _strip_furigana(soup.find('div', class_='card-sentence'))
+    # custom sentence (may not be present)
+    sentence_section = soup.find('div', class_='card-sentence')
+    if sentence_section:
+        sentence = _strip_furigana(sentence_section)
+    else:
+        sentence = None
 
     return Word(
         spelling=spelling,
@@ -116,7 +113,7 @@ def get_word_info() -> Word:
 
 
 def main():
-    word = get_word_info()
+    word = lookup_word("故郷")
     print(word)
 
 
