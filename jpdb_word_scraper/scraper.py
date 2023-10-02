@@ -33,11 +33,11 @@ class ParseError(Exception):
 
 def strings_to_html_list(strings: typing.List[str]) -> str:
     pattern = re.compile(r"^\d\. ")
-    elements = [
+    elements = (
         f"<li>{re.sub(pattern, '', element)}</li>"
         for element in strings
-    ]
-    return f"<ol>{elements}</ol>"
+    )
+    return f"<ol>{''.join(elements)}</ol>"
 
 
 class JPDBScraper:
