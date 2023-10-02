@@ -1,1 +1,5 @@
 .venv/*
+jpdb_words.csv
+reviews.json
+.idea
+__pycache__
