@@ -14,6 +14,8 @@ import bs4
 import lxml
 import requests
 
+COOKIE = os.getenv("JPDB_COOKIE")
+
 
 @dataclasses.dataclass
 class Word:
@@ -131,11 +133,8 @@ class JPDBScraper:
         )
 
 
-cookie = os.getenv("JPDB_COOKIE")
-
-
 def collect_words(words: typing.List[str]):
-    scraper = JPDBScraper(cookie)
+    scraper = JPDBScraper(COOKIE)
     lookup = []
     for i, word in enumerate(words, 1):
         print(f"({i}/{len(words)}) looking up word {word}")
