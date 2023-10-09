@@ -23,8 +23,7 @@ COOKIE = os.getenv("JPDB_COOKIE")
 class Word:
     spelling: str
     reading: typing.Optional[str]
-    definitions: str
-    parts_of_speech: str
+    glossary: str
     notes: typing.Optional[str]
     sentence: typing.Optional[str]
 
@@ -125,11 +124,15 @@ class JPDBScraper:
         else:
             sentence = None
 
+        # Combine parts of speech and definitions into the glossary field.
+        pos = ", ".join(pos_list)
+        definitions = strings_to_html_list(definitions)
+        glossary = f'<div class="glossary"><p class="pos">{pos}</p>{definitions}</div>'
+
         return Word(
             spelling=spelling,
             reading=reading,
-            definitions=strings_to_html_list(definitions),
-            parts_of_speech=", ".join(pos_list),
+            glossary=glossary,
             notes=notes,
             sentence=sentence,
         )
@@ -153,7 +156,6 @@ def build_csv(words: typing.List[Word], output_filename: str) -> None:
             csvfile,
             fieldnames=[field.name for field in dataclasses.fields(Word)]
         )
-        writer.writeheader()
 
         for word in words:
             writer.writerow(dataclasses.asdict(word))
