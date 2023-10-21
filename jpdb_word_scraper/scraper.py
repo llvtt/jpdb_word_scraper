@@ -195,7 +195,8 @@ if __name__ == '__main__':
     parser.add_argument(
         "--prev-review-file",
         "-p",
-        help="Previous JPDB review file JSON",
+        help="Previous JPDB review file JSON. Words already present in this file won't be "
+             "included in the final output.",
         type=str,
         required=False,
     )
@@ -204,7 +205,7 @@ if __name__ == '__main__':
         "-o",
         help="Output file",
         type=str,
-        default="jpdb_reviews.json",
+        default="jpdb_anki_reviews.csv",
     )
 
     args = parser.parse_args()
@@ -213,8 +214,3 @@ if __name__ == '__main__':
         prev_review_file=args.prev_review_file,
         output=args.output
     )
-
-# def old_main():
-#     scraper = JPDBScraper(cookie)
-#     word = scraper.lookup_word("故郷")
-#     print(word)
