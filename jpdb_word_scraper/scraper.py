@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 
+import argparse
 import csv
 import dataclasses
 import itertools
 import json
 import os
+import pathlib
 import re
 import time
 import typing
@@ -144,36 +146,73 @@ def collect_words(words: typing.List[str]):
     return lookup
 
 
-def build_csv(words: typing.List[Word]) -> None:
-    with open("jpdb_words.csv", "w") as csvfile:
-        writer = csv.DictWriter(csvfile, fieldnames=[field.name for field in dataclasses.fields(Word)])
+def build_csv(words: typing.List[Word], output_filename: str) -> None:
+    pathlib.Path(output_filename).parent.mkdir(parents=True, exist_ok=True)
+    with open(output_filename, "w") as csvfile:
+        writer = csv.DictWriter(
+            csvfile,
+            fieldnames=[field.name for field in dataclasses.fields(Word)]
+        )
         writer.writeheader()
 
         for word in words:
             writer.writerow(dataclasses.asdict(word))
 
 
-def review_words(jpdb_reviews: dict) -> typing.List[str]:
-    return list({
+def review_words(jpdb_reviews: dict) -> typing.Set[str]:
+    return {
         entry["spelling"] for entry in itertools.chain(
             jpdb_reviews["cards_vocabulary_jp_en"],
             jpdb_reviews["cards_vocabulary_en_jp"],
         )
-    })
+    }
 
 
-def main():
-    review_file = "reviews.json"
-    with open(review_file) as reviewfile:
-        reviews = json.load(reviewfile)
+def create_reviews_csv(review_file: str, prev_review_file: typing.Optional[str], output: str):
+    with open(review_file) as f:
+        reviews = json.load(f)
 
     words = review_words(reviews)
-    lookup = collect_words(words)
-    build_csv(lookup)
+
+    if prev_review_file:
+        with open(prev_review_file) as pf:
+            previous_reviews = json.load(pf)
+        words -= review_words(previous_reviews)
+
+    lookup = collect_words(list(words))
+    build_csv(lookup, output)
 
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--review-file",
+        "-r",
+        help="JPDB review file JSON",
+        type=str,
+        default="review.json",
+    )
+    parser.add_argument(
+        "--prev-review-file",
+        "-p",
+        help="Previous JPDB review file JSON",
+        type=str,
+        required=False,
+    )
+    parser.add_argument(
+        "--output",
+        "-o",
+        help="Output file",
+        type=str,
+        default="jpdb_reviews.json",
+    )
+
+    args = parser.parse_args()
+    create_reviews_csv(
+        review_file=args.review_file,
+        prev_review_file=args.prev_review_file,
+        output=args.output
+    )
 
 # def old_main():
 #     scraper = JPDBScraper(cookie)
