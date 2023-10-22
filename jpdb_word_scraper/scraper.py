@@ -16,6 +16,7 @@ import bs4
 import lxml
 import requests
 
+# e.g. sid=XXXXXX
 COOKIE = os.getenv("JPDB_COOKIE")
 
 

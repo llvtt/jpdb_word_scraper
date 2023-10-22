@@ -3,3 +3,8 @@ jpdb_words.csv
 reviews.json
 .idea
 __pycache__
+.envrc
+jpdb*.json
+jpdb*.csv
+reviews*.csv
+reviews*.json
