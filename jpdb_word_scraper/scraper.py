@@ -1,8 +1,7 @@
 #!/usr/bin/env python
-
-import argparse
 import csv
 import dataclasses
+import functools
 import itertools
 import json
 import os
@@ -92,8 +91,8 @@ class JPDBScraper:
         reading = None
         if isinstance(accent_section, bs4.element.Tag):
             accent_content = accent_section.find('div', class_='subsection')
-            if isinstance(accent_content, bs4.element.Tag):
-                reading = accent_content.text
+            # There may be multiple pitch accents listed.
+            reading = typing.cast(bs4.element.Tag, accent_content.contents[0]).contents[0].text
 
         # meanings
         meanings = soup.find('div', class_='subsection-meanings')
@@ -139,12 +138,16 @@ class JPDBScraper:
         )
 
 
+@functools.cache
+def scraper():
+    return JPDBScraper(COOKIE)
+
+
 def collect_words(words: typing.List[str]):
-    scraper = JPDBScraper(COOKIE)
     lookup = []
     for i, word in enumerate(words, 1):
         print(f"({i}/{len(words)}) looking up word {word}")
-        lookup.append(scraper.lookup_word(word))
+        lookup.append(scraper().lookup_word(word))
         time.sleep(1)
 
     return lookup
