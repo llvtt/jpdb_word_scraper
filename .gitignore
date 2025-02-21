@@ -8,3 +8,4 @@ jpdb*.json
 jpdb*.csv
 reviews*.csv
 reviews*.json
+.venv

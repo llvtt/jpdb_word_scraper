@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import argparse
 import csv
 import dataclasses
 import functools
@@ -110,7 +111,7 @@ class JPDBScraper:
             raise ParseError("could not find part-of-speech section")
         pos_list = [pos.text for pos in pos_section.children]
 
-        # custon definition (may not be present)
+        # custom definition (may not be present)
         custom_meaning = meanings.find('div', class_='custom-meaning')
         if custom_meaning:
             notes = "".join(str(element) for element in custom_meaning.contents)
