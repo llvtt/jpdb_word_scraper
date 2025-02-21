@@ -9,7 +9,8 @@ import os
 import pathlib
 import re
 import time
-import typing
+
+from typing import Optional, List, cast
 
 import bs4
 # noinspection PyUnresolvedReferences
@@ -23,17 +24,17 @@ COOKIE = os.getenv("JPDB_COOKIE")
 @dataclasses.dataclass
 class Word:
     spelling: str
-    reading: typing.Optional[str]
+    reading: Optional[str]
     glossary: str
-    notes: typing.Optional[str]
-    sentence: typing.Optional[str]
+    notes: Optional[str]
+    sentence: Optional[str]
 
 
 class ParseError(Exception):
     pass
 
 
-def strings_to_html_list(strings: typing.List[str]) -> str:
+def strings_to_html_list(strings: List[str]) -> str:
     pattern = re.compile(r"^\d\. ")
     elements = (
         f"<li>{re.sub(pattern, '', element)}</li>"
@@ -46,6 +47,7 @@ class JPDBScraper:
     def __init__(self, cookie):
         self._session_cookie = cookie
         self._http_client = None
+        self._logged_in = False
 
     def _japanese_strings(self, tag_with_text):
         """Yield substrings of the japanese text markup without furigana."""
@@ -93,7 +95,7 @@ class JPDBScraper:
         if isinstance(accent_section, bs4.element.Tag):
             accent_content = accent_section.find('div', class_='subsection')
             # There may be multiple pitch accents listed.
-            reading = typing.cast(bs4.element.Tag, accent_content.contents[0]).contents[0].text
+            reading = cast(bs4.element.Tag, accent_content.contents[0]).contents[0].text
 
         # meanings
         meanings = soup.find('div', class_='subsection-meanings')
@@ -144,7 +146,7 @@ def scraper():
     return JPDBScraper(COOKIE)
 
 
-def collect_words(words: typing.List[str]):
+def collect_words(words: List[str]):
     lookup = []
     for i, word in enumerate(words, 1):
         print(f"({i}/{len(words)}) looking up word {word}")
@@ -154,28 +156,29 @@ def collect_words(words: typing.List[str]):
     return lookup
 
 
-def build_csv(words: typing.List[Word], output_filename: str) -> None:
+def build_csv(words: List[Word], output_filename: str) -> None:
     pathlib.Path(output_filename).parent.mkdir(parents=True, exist_ok=True)
-    with open(output_filename, "w") as csvfile:
+    with open(output_filename, "wt") as csvfile:
         writer = csv.DictWriter(
             csvfile,
             fieldnames=[field.name for field in dataclasses.fields(Word)]
         )
+        writer.writeheader()
 
         for word in words:
             writer.writerow(dataclasses.asdict(word))
 
 
-def review_words(jpdb_reviews: dict) -> typing.Set[str]:
-    return {
+def review_words(jpdb_reviews: dict) -> List[str]:
+    return list({
         entry["spelling"] for entry in itertools.chain(
             jpdb_reviews["cards_vocabulary_jp_en"],
             jpdb_reviews["cards_vocabulary_en_jp"],
         )
-    }
+    })
 
 
-def create_reviews_csv(review_file: str, prev_review_file: typing.Optional[str], output: str):
+def create_reviews_csv(review_file: str, prev_review_file: Optional[str], output: str, limit: Optional[int]):
     with open(review_file) as f:
         reviews = json.load(f)
 
@@ -186,7 +189,7 @@ def create_reviews_csv(review_file: str, prev_review_file: typing.Optional[str],
             previous_reviews = json.load(pf)
         words -= review_words(previous_reviews)
 
-    lookup = collect_words(list(words))
+    lookup = collect_words(words[:limit])
     build_csv(lookup, output)
 
 
@@ -214,10 +217,17 @@ if __name__ == '__main__':
         type=str,
         default="jpdb_anki_reviews.csv",
     )
+    parser.add_argument(
+        "--limit",
+        help="Maximum words to look up (useful for testing)",
+        type=int,
+        required=False,
+    )
 
     args = parser.parse_args()
     create_reviews_csv(
         review_file=args.review_file,
         prev_review_file=args.prev_review_file,
-        output=args.output
+        output=args.output,
+        limit=args.limit,
     )
